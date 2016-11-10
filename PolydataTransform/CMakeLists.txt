@@ -2,14 +2,15 @@ cmake_minimum_required(VERSION 2.6)
 
 project(polydatatransform)
 
-find_package(ITK COMPONENTS
-  ITKCommon
-  ITKIOImageBase
-  ITKImageFunction
-  ITKSpatialObjects
-  ITKTransform
-  ${ITK_IO_MODULES_USED}
-)
+find_package(ITK REQUIRED)
+# find_package(ITK COMPONENTS
+#   ITKCommon
+#   ITKIOImageBase
+#   ITKImageFunction
+#   ITKSpatialObjects
+#   ITKTransform
+#   ${ITK_IO_MODULES_USED}
+# )
 include(${ITK_USE_FILE})
 
 find_package(VTK REQUIRED)
