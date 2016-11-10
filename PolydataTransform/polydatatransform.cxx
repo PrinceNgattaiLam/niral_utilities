@@ -30,6 +30,7 @@
 #include <itkVectorLinearInterpolateImageFunction.h>
 #include <itkVersion.h>
 
+#include "fiberfileIO.hxx"
 #include "deformationfieldoperations.h"
 #include "dtitypes.h"
 #include "polydatatransformCLP.h"
@@ -50,15 +51,15 @@ int main(int argc, char* argv[])
     return EXIT_FAILURE;
   }
 
-  vtkSmartPointer<vtkPolyDataReader> reader = vtkSmartPointer<vtkPolyDataReader>::New();
-  std::cout << "Reading " << fiberFile<< std::endl;
-  reader->SetFileName(fiberFile.c_str());
-  reader->Update();
+  // vtkSmartPointer<vtkPolyDataReader> reader = vtkSmartPointer<vtkPolyDataReader>::New();
+  // std::cout << "Reading " << fiberFile<< std::endl;
+  // reader->SetFileName(fiberFile.c_str());
+  // reader->Update();
 
-  // Extract the polydata
-  vtkSmartPointer<vtkPolyData> polydata =
-    reader->GetOutput();
-
+  // // Extract the polydata
+  // vtkSmartPointer<vtkPolyData> polydata =
+  //   reader->GetOutput();
+  
 
   DeformationImageType::Pointer deformationfield;
   if( !hField.empty() )
@@ -87,13 +88,31 @@ int main(int argc, char* argv[])
   }
 
 
+  vtkPoints* inPts;
+  vtkIdType numPoints;
+  vtkPoints    * points = vtkPoints::New();
+  vtkSmartPointer<vtkPolyData> polydata;
+  if(fiberFile.rfind(".vtk")!= std::string::npos || fiberFile.rfind(".vtp")!= std::string::npos)
+  {
+    polydata = readVTKFile(fiberFile.c_str());
+  }
+
+  else if(fiberFile.rfind(".fcsv")!= std::string::npos)
+  {
+    polydata = readFCSVFile(fiberFile.c_str());
+  }
+  else
+  {
+    throw itk::ExceptionObject("Unknown file format for input fibers must be .vtp, .vtk or .fcsv");
+  }
+
+
     typedef DeformationInterpolateType::ContinuousIndexType ContinuousIndexType;
     ContinuousIndexType ci, origci;
-    // For each point along the fiber
-     vtkIdType numPoints= polydata->GetNumberOfPoints();
-     vtkPoints* inPts = polydata->GetPoints();
-     vtkPoints    * points = vtkPoints::New();
 
+    // For each point along the fiber
+    numPoints= polydata->GetNumberOfPoints();
+    inPts = polydata->GetPoints();
 
     typedef DTIPointType::PointType PointType;
     PointType fiberpoint;
@@ -159,31 +178,45 @@ int main(int argc, char* argv[])
     }
     polydata->SetPoints(points);
 
+  if(fiberOutput.rfind(".vtk")!= std::string::npos || fiberFile.rfind(".vtp")!= std::string::npos)
+  {
+    writeVTKFile(fiberOutput.c_str(), polydata);
+  }
 
+  else if(fiberOutput.rfind(".fcsv")!= std::string::npos)
+  {
+    writeFCSVFile(fiberOutput.c_str(), polydata);
+  }
+  else
+  {
+    throw itk::ExceptionObject("Unknown file format for output fibers must be .vtp, .vtk or .fcsv");
+  }
+  std::cout<<"Done!"<<std::endl;
+  std::cout<<"Number of fibers saved: "<<polydata->GetNumberOfLines()<<std::endl;
 
-  std::cout<<std::endl;
-  std::cout<<"Saving fibers...."<<std::endl;
-  std::cout<<fiberOutput<<std::endl;
-  vtkPolyDataWriter * fiberwriter = vtkPolyDataWriter::New();
-  fiberwriter->SetFileName(fiberOutput.c_str());
-  #if (VTK_MAJOR_VERSION < 6)
-  fiberwriter->SetInput(polydata);
-  #else
-  fiberwriter->SetInputData(polydata);
-  #endif
-  fiberwriter->SetFileTypeToBinary();
-  fiberwriter->Update();
-  try
-    {
-    fiberwriter->Write();
-    std::cout<<"Done!"<<std::endl;
-    std::cout<<"Number of fibers saved: "<<polydata->GetNumberOfLines()<<std::endl;
-    }
-  catch(...)
-    {
-    std::cout << "Error while saving fiber file." << std::endl;
-    throw;
-    }
+  // std::cout<<std::endl;
+  // std::cout<<"Saving fibers...."<<std::endl;
+  // std::cout<<fiberOutput<<std::endl;
+  // vtkPolyDataWriter * fiberwriter = vtkPolyDataWriter::New();
+  // fiberwriter->SetFileName(fiberOutput.c_str());
+  // #if (VTK_MAJOR_VERSION < 6)
+  // fiberwriter->SetInput(polydata);
+  // #else
+  // fiberwriter->SetInputData(polydata);
+  // #endif
+  // fiberwriter->SetFileTypeToBinary();
+  // fiberwriter->Update();
+  // try
+  //   {
+  //   fiberwriter->Write();
+  //   std::cout<<"Done!"<<std::endl;
+  //   std::cout<<"Number of fibers saved: "<<polydata->GetNumberOfLines()<<std::endl;
+  //   }
+  // catch(...)
+  //   {
+  //   std::cout << "Error while saving fiber file." << std::endl;
+  //   throw;
+  //   }
 
   return EXIT_SUCCESS;
 }
